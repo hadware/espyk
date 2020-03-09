@@ -7,14 +7,16 @@ from sly.yacc import YaccProduction
 
 class VowelTransitionLexer(Lexer):
     tokens = {
-        'LEN', 'RATE', 'RMS', 'GLOTAL_STOP', 'FORMANT', 'EQUAL', 'INTEGER'
+        'LEN', 'LENADD', 'RATE', 'RMS', 'GLOTAL_STOP',
+        'FORMANT', 'EQUAL', 'INTEGER'
     }
 
     ignore_whitespace = "\s+"
 
+    LENADD = r"lenadd"
     LEN = r"len"
     RATE = r"rate"
-    RMS = r"rate"
+    RMS = r"rms"
     GLOTAL_STOP = r"glstop"
     FORMANT = r"f[1-4]"
     EQUAL = "="
@@ -50,7 +52,7 @@ class PhonemeSourceTableLexer(Lexer):
     INCLUDE = r"include"
 
     # procedure declaration
-    PROCEDURE = r"procedure"
+    PROCEDURE_START = r"procedure"
     PROCEDURE_END = r"endprocedure"
 
     # phoneme declarations literals
@@ -60,6 +62,17 @@ class PhonemeSourceTableLexer(Lexer):
     L_PAREN = r"\("
     R_PAREN = r"\)"
     COMMA = r","
+
+    # static properties
+    TYPE = r"(pause|nopause|stress|unstressed|liquid|rhotic|trill|virtual)"
+    FEATURE = r"(nas|stp|afr|frc|flp|trl|apr|clk|ejc|imp|vwl|lat|sib|blb|lbd|" \
+              r"bld|dnt|alv|pla|rfx|alp|pal|vel|lbv|uvl|phr|glt|vcd|vls|hgh|" \
+              r"smh|umd|mid|lmd|sml|low|fnt|cnt|bck|unr|rnd|lgl|idt|apc|lmn|" \
+              r"egs|igs|brv|slv|stv|crv|glc|ptr|cmp|mrd|lrd|syl|nsy|asp|nrs|" \
+              r"lrs|unx|pzd|vzd|fzd|nzd|rzd|atr|rtr|fts|lns|est|hlg|lng|elg)"
+    LENGTHMOD = r"lengthmod"
+    STARTTYPE = r"starttype"
+    ENDTYPE = r"endtype"
 
     # instructions conditional keywords
     IF = r"IF"
@@ -78,15 +91,19 @@ class PhonemeSourceTableLexer(Lexer):
     ADD_WAV = r"addWav"
     RETURN = r"RETURN"
     PHONEME_CHANGE = r"(ChangePhoneme|ChangeIfDiminished|ChangeIfUnstressed|" \
-                     r"ChangeIfNotStressed|ChangeIfStressed|IfNextVowelAppend)"
+                     r"ChangeIfNotStressed|ChangeIfStressed|IfNextVowelAppend|" \
+                     r"IfNextVowelAppend)"
     VOWEL_TRANSITIONS = r"(Vowelin|Vowelout)"
-    VOWEL_MODIFICATIOn = r"(VowelStart|VowelEnding)"
+    VOWEL_MODIFICATION = r"(VowelStart|VowelEnding)"
+    NEXT_VOWEL_SWITCH = r"r(NextVowelStarts|PrevVowelEndings)"
+    ENDWSITCH = r"EndSwitch"
     LENGTH = r"length"
     IPA = r"ipa"
 
     # conditions keywords
     CONDITION = r"(thisPh|prevPh|prevPhW|prev2PhW|nextPh|next2Ph|nextPhW|" \
-                r"next2PhW|next3PhW|nextVowel|prevVowel|PreVoicing|KlattSynth)"
+                r"next2PhW|next3PhW|nextVowel|prevVowel"
+    NOARG_CONDITION = r"(PreVoicing|KlattSynth)"
 
     # attributes keywords (used in conditions)
     ATTRIBUTE = r"(isPause|isPause2|isVowel|isNotVowel|isLiquid|isNasal|" \
@@ -95,19 +112,9 @@ class PhonemeSourceTableLexer(Lexer):
                 r"isAfterStress|isVoiced|isDiminished|isUnstressed|" \
                 r"isNotStressed|isStressed|isMaxStress)"
 
-    # static properties
-    TYPE = r"(pause|nopause|stress|unstressed|liquid|rhotic|trill|virtual)"
-    FEATURE = r"(nas|stp|afr|frc|flp|trl|apr|clk|ejc|imp|vwl|lat|sib|blb|lbd|" \
-              r"bld|dnt|alv|pla|rfx|alp|pal|vel|lbv|uvl|phr|glt|vcd|vls|hgh|" \
-              r"smh|umd|mid|lmd|sml|low|fnt|cnt|bck|unr|rnd|lgl|idt|apc|lmn|" \
-              r"egs|igs|brv|slv|stv|crv|glc|ptr|cmp|mrd|lrd|syl|nsy|asp|nrs|" \
-              r"lrs|unx|pzd|vzd|fzd|nzd|rzd|atr|rtr|fts|lns|est|hlg|lng|elg)"
-    LENGTHMOD = r"lengthmod"
-    STARTTYPE = r"starttype"
-    ENDTYPE = r"endtype"
-
     # either a string or a number, can be used for some literal value or
-    # for a phoneme's name
+    # for a phoneme's name. Has to be kept here at the end,
+    # else will match everything
     LITERAL = r"\S+"
 
 
@@ -119,25 +126,40 @@ class PhonemeSourceTableParser(Parser):
         self.for_root = True
         self.table = table
 
+        # todo: depending on for_root, the starter rule is to be different
+
     def parse(self, table_name: str):
         pass
 
-    @_("PHONEMETABLE LITERAL LITERAL table_body")
-    def phonemetable(self, p: YaccProduction):
+    @_("block blocks_list",
+       "block")
+    def blocks_list(self, p: YaccProduction):
         pass
 
-    @_("INCLUDE LITERAL")
-    def table_body(self, p: YaccProduction):
-        pass
-
-    # TODO : add procedures
-    @_("table_body phoneme_definition",
-       "phoneme_definition")
-    def table_body(self, p: YaccProduction):
+    @_("PHONEMETABLE LITERAL LITERAL blocks_list")
+    def block(self, p: YaccProduction):
         pass
 
     @_("PHONEME_START phoneme_body PHONEME_END")
-    def phoneme_definition(self, p: YaccProduction):
+    def block(self, p: YaccProduction):
+        pass
+
+    @_("INCLUDE LITERAL")
+    def block(self, p: YaccProduction):
+        pass
+
+    @_("PROCEDURE_START instructions_list PROCEDURE_END")
+    def block(self, p: YaccProduction):
+        pass
+
+    @_("instruction instructions_list",
+       "intruction")
+    def instructions_list(self, p: YaccProduction):
+        pass
+
+    @_("LITERAL literals_list",
+       "LITERAL")
+    def literals_list(self, p: YaccProduction):
         pass
 
     @_("phoneme_body phoneme_property",
@@ -201,6 +223,24 @@ class PhonemeSourceTableParser(Parser):
     def instruction(self, p: YaccProduction):
         pass
 
+    @_("VOWEL_TRANSITIONS literals_list")
+    def instruction(self, p: YaccProduction):
+        pass
+
+    @_("VOWEL_MODIFICATION L_PAREN LITERAL R_PAREN",
+       "VOWEL_MODIFICATION L_PAREN LITERAL COMMA LITERAL R_PAREN")
+    def instruction(self, p: YaccProduction):
+        pass
+
+    @_("NEXT_VOWEL_SWITCH vowel_mod_list ENDWSITCH")
+    def instruction(self, p: YaccProduction):
+        pass
+
+    @_("VOWEL_MODIFICATION vowel_mod_list",
+       "VOWEL_MODIFICATION")
+    def vowel_mod_list(self, p: YaccProduction):
+        pass
+
     @_("conditional_statement")
     def instruction(self, p: YaccProduction):
         pass
@@ -209,15 +249,15 @@ class PhonemeSourceTableParser(Parser):
     def conditional_statement(self, p: YaccProduction):
         pass
 
-    @_("IF conditions THEN instructions")
+    @_("IF conditions THEN instructions_list")
     def if_branch(self, p: YaccProduction):
         pass
 
-    @_("ELSE instructions")
+    @_("ELSE instructions_list")
     def else_branch(self, p: YaccProduction):
         pass
 
-    @_("ELIF conditions THEN instructions")
+    @_("ELIF conditions THEN instructions_list")
     def elif_branch(self, p: YaccProduction):
         pass
 
@@ -227,13 +267,18 @@ class PhonemeSourceTableParser(Parser):
     def elif_list(self, p: YaccProduction):
         pass
 
-    @_("conditions_and_list",
-       "condition_or_list",
+    @_("conditional_statement OR conditions",
+       "conditional_statement AND conditions",
        "conditional_statement")
     def conditions(self, p: YaccProduction):
         pass
 
-    @_("NOT condition",
-       "condition")
+    @_("condition",
+       "NOT condition")
     def conditional_statement(self, p: YaccProduction):
+        pass
+
+    @_("CONDITION L_PAREN ATTRIBUTE R_PAREN",
+       "NOARG_CONDITION")
+    def condition(self, p: YaccProduction):
         pass
