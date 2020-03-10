@@ -37,7 +37,14 @@ class VowelTransitionParser(Parser):
 
 class PhonemeSourceTableLexer(Lexer):
     tokens = {
-
+        'PHONEMETABLE' 'INCLUDE', 'PROCEDURE_START', 'PROCEDURE END',
+        'PHONEME_START', 'PHONEME_END', 'L_PAREN', 'R_PAREN', 'COMMA',
+        'TYPE', 'FEATURE', 'LENGTHMOD', 'STARTYPE', 'ENDTYPE',
+        'IF', 'THEN', 'ELSE', 'ELIF', 'ENDIF', 'OR', 'AND', 'NOT',
+        'FORMANTS', 'CALL', 'WAV', 'ADD_WAV', 'RETURN', 'PHONEME_CHANGE',
+        'VOWEL_TRANSITION', 'VOWEL_MODIFICATION', 'NEXT_VOWEL_SWITCH',
+        'ENDSWITCH', 'LENGTH', 'IPA', 'CONDITION', 'NOARG_CONDITION',
+        'ATTRIBUTE', 'LITERAL'
     }
     # ignoring whitespace and comments
     ignore = ' \t'
@@ -121,6 +128,7 @@ class PhonemeSourceTableLexer(Lexer):
 class PhonemeSourceTableParser(Parser):
     """Parses phoneme source files (definitions and prononciation rules
     for all phonemes)"""
+    tokens = PhonemeSourceTableLexer.tokens
 
     def __init__(self, for_root: bool, table: Optional[str] = None):
         self.for_root = True
